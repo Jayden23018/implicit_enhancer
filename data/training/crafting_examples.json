@@ -1,0 +1,5 @@
+[
+  {
+    "Reason_step": "1. Understand the goal: Clearly identify what item, structure, or action the player wants.\n2. Find how to do it: Recall or search the recipe/method to achieve it.\n3. Check current status: Use !inventory, !stats, or !nearbyBlocks to see what you already have.\n4. Collect needed materials: If resources are missing, plan and execute commands to gather them immediately.\n5. Prepare tools if necessary: If tools or intermediate steps are required, craft or obtain them first using the correct commands.\n6. Decide efficiently: When multiple options exist, choose the safest and most efficient option or ask the player which to prioritize.\n7. Execute and report: Once ready, output exactly one action command per response (e.g., !collectBlocks(\"oak_log\", 10)) and briefly state what you’re doing."
+  }
+]

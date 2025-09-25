@@ -29,86 +29,121 @@ async function equipHighestAttack(bot) {
         await bot.equip(weapon, 'hand');
 }
 
-export async function craftRecipe(bot, itemName, num=1) {
-    /**
-     * Attempt to craft the given item name from a recipe. May craft many items.
-     * @param {MinecraftBot} bot, reference to the minecraft bot.
-     * @param {string} itemName, the item name to craft.
-     * @returns {Promise<boolean>} true if the recipe was crafted, false otherwise.
-     * @example
-     * await skills.craftRecipe(bot, "stick");
-     **/
-    let placedTable = false;
+export async function craftRecipe(bot, itemName, num = 1) {
+  /**
+   * Attempt to craft the given item name from a recipe. May craft many items.
+   * @param {MinecraftBot} bot, reference to the minecraft bot.
+   * @param {string} itemName, the item name to craft.
+   * @returns {Promise<boolean>} true if the recipe was crafted, false otherwise.
+   **/
+  let placedTable = false;
+
+  try {
+    console.log(`[craftRecipe] Start crafting ${itemName} x${num}`);
 
     if (mc.getItemCraftingRecipes(itemName).length == 0) {
-        log(bot, `${itemName} is either not an item, or it does not have a crafting recipe!`);
-        return false;
+      log(bot, `${itemName} is either not an item, or it does not have a crafting recipe!`);
+      return false;
     }
 
     // get recipes that don't require a crafting table
-    let recipes = bot.recipesFor(mc.getItemId(itemName), null, 1, null); 
+    let recipes = bot.recipesFor(mc.getItemId(itemName), null, 1, null);
     let craftingTable = null;
     const craftingTableRange = 32;
+
     placeTable: if (!recipes || recipes.length === 0) {
-        recipes = bot.recipesFor(mc.getItemId(itemName), null, 1, true);
-        if(!recipes || recipes.length === 0) break placeTable; //Don't bother going to the table if we don't have the required resources.
+      recipes = bot.recipesFor(mc.getItemId(itemName), null, 1, true);
+      if (!recipes || recipes.length === 0) break placeTable; // Don't bother going to the table if we don't have the required resources.
 
-        // Look for crafting table
-        craftingTable = world.getNearestBlock(bot, 'crafting_table', craftingTableRange);
-        if (craftingTable === null){
-
-            // Try to place crafting table
-            let hasTable = world.getInventoryCounts(bot)['crafting_table'] > 0;
-            if (hasTable) {
-                let pos = world.getNearestFreeSpace(bot, 1, 6);
-                await placeBlock(bot, 'crafting_table', pos.x, pos.y, pos.z);
-                craftingTable = world.getNearestBlock(bot, 'crafting_table', craftingTableRange);
-                if (craftingTable) {
-                    recipes = bot.recipesFor(mc.getItemId(itemName), null, 1, craftingTable);
-                    placedTable = true;
-                }
-            }
-            else {
-                log(bot, `Crafting ${itemName} requires a crafting table.`)
-                return false;
-            }
-        }
-        else {
+      // Look for crafting table
+      craftingTable = world.getNearestBlock(bot, 'crafting_table', craftingTableRange);
+      if (craftingTable === null) {
+        // Try to place crafting table
+        let hasTable = world.getInventoryCounts(bot)['crafting_table'] > 0;
+        if (hasTable) {
+          let pos = world.getNearestFreeSpace(bot, 1, 6);
+          console.log('[craftRecipe] Placing crafting table at', pos);
+          await placeBlock(bot, 'crafting_table', pos.x, pos.y, pos.z);
+          craftingTable = world.getNearestBlock(bot, 'crafting_table', craftingTableRange);
+          if (craftingTable) {
             recipes = bot.recipesFor(mc.getItemId(itemName), null, 1, craftingTable);
+            placedTable = true;
+          }
+        } else {
+          log(bot, `Crafting ${itemName} requires a crafting table.`);
+          return false;
         }
+      } else {
+        recipes = bot.recipesFor(mc.getItemId(itemName), null, 1, craftingTable);
+      }
     }
+
     if (!recipes || recipes.length === 0) {
-        log(bot, `You do not have the resources to craft a ${itemName}. It requires: ${Object.entries(mc.getItemCraftingRecipes(itemName)[0][0]).map(([key, value]) => `${key}: ${value}`).join(', ')}.`);
-        if (placedTable) {
-            await collectBlock(bot, 'crafting_table', 1);
-        }
-        return false;
+      log(
+        bot,
+        `You do not have the resources to craft a ${itemName}. It requires: ${Object.entries(
+          mc.getItemCraftingRecipes(itemName)[0][0]
+        )
+          .map(([key, value]) => `${key}: ${value}`)
+          .join(', ')}.`
+      );
+      if (placedTable) {
+        await collectBlock(bot, 'crafting_table', 1);
+      }
+      return false;
     }
-    
+
     if (craftingTable && bot.entity.position.distanceTo(craftingTable.position) > 4) {
-        await goToNearestBlock(bot, 'crafting_table', 4, craftingTableRange);
+      console.log('[craftRecipe] Moving to crafting table...');
+      await goToNearestBlock(bot, 'crafting_table', 4, craftingTableRange);
     }
 
     const recipe = recipes[0];
-    console.log('crafting...');
-    //Check that the agent has sufficient items to use the recipe `num` times.
-    const inventory = world.getInventoryCounts(bot); //Items in the agents inventory
-    const requiredIngredients = mc.ingredientsFromPrismarineRecipe(recipe); //Items required to use the recipe once.
+    console.log('[craftRecipe] crafting...', recipe);
+
+    // Check that the agent has sufficient items to use the recipe `num` times.
+    const inventory = world.getInventoryCounts(bot); // Items in the agents inventory
+    const requiredIngredients = mc.ingredientsFromPrismarineRecipe(recipe); // Items required to use the recipe once.
     const craftLimit = mc.calculateLimitingResource(inventory, requiredIngredients);
-    
-    await bot.craft(recipe, Math.min(craftLimit.num, num), craftingTable);
-    if(craftLimit.num<num) log(bot, `Not enough ${craftLimit.limitingResource} to craft ${num}, crafted ${craftLimit.num}. You now have ${world.getInventoryCounts(bot)[itemName]} ${itemName}.`);
-    else log(bot, `Successfully crafted ${itemName}, you now have ${world.getInventoryCounts(bot)[itemName]} ${itemName}.`);
-    if (placedTable) {
+    console.log('[craftRecipe] craftLimit:', craftLimit);
+
+  
+    try {
+      await bot.craft(recipe, Math.min(craftLimit.num, num), craftingTable);
+    } catch (err) {
+      console.error('[craftRecipe] bot.craft threw an error:', err);
+      if (placedTable) {
         await collectBlock(bot, 'crafting_table', 1);
+      }
+      return false;
     }
 
-    //Equip any armor the bot may have crafted.
-    //There is probablly a more efficient method than checking the entire inventory but this is all mineflayer-armor-manager provides. :P
-    bot.armorManager.equipAll(); 
+    if (craftLimit.num < num)
+      log(bot, `Not enough ${craftLimit.limitingResource} to craft ${num}, crafted ${craftLimit.num}. You now have ${world.getInventoryCounts(bot)[itemName]} ${itemName}.`);
+    else log(bot, `Successfully crafted ${itemName}, you now have ${world.getInventoryCounts(bot)[itemName]} ${itemName}.`);
 
+    if (placedTable) {
+      await collectBlock(bot, 'crafting_table', 1);
+    }
+
+    // Equip any armor the bot may have crafted.
+    bot.armorManager.equipAll();
+
+    console.log('[craftRecipe] Done crafting', itemName);
     return true;
+  } catch (err) {
+    console.error('[craftRecipe] Caught top-level error:', err);
+    if (placedTable) {
+      try {
+        await collectBlock(bot, 'crafting_table', 1);
+      } catch (e) {
+        console.error('[craftRecipe] Failed to collect placed table after error:', e);
+      }
+    }
+    return false;
+  }
 }
+
 
 export async function wait(bot, milliseconds) {
     /**
