@@ -80,7 +80,7 @@ export class Agent {
             }
         });
 
-        this.bot.on('change_suit', () =>{
+        this.bot.on('change_suit', () => {
         })
 
         const spawnTimeout = setTimeout(() => {
@@ -106,6 +106,10 @@ export class Agent {
     }
 
     async _setupEventHandlers(save_data, init_message) {
+        const ignore_tags = [
+            "[[INTERNAL_MESSAGE]]"
+        ];
+
         const ignore_messages = [
             "Set own game mode to",
             "Set the time to",
@@ -116,8 +120,8 @@ export class Agent {
         ];
         
         const respondAtFunc = async (username, message) => {
-            if (Object.keys(this.bot.players).length === 2 || message.startsWith("@all") || message.startsWith(`@${this.name}`)) {
-                this.respondFunc(username, message)
+            if (Object.keys(this.bot.players).length === 2 || settings.respond_to_all_messages === true || message.includes("@all") || message.includes(`@${this.name}`)) {
+                this.respondFunc(username, message);
             }
         }
 
@@ -126,18 +130,19 @@ export class Agent {
             if (settings.only_chat_with.length > 0 && !settings.only_chat_with.includes(username)) return;
             try {
                 if (ignore_messages.some((m) => message.startsWith(m))) return;
+                if (ignore_tags.some((m) => message.includes(m))) return;
 
                 this.shut_up = false;
 
                 console.log(this.name, 'received message from', username, ':', message);
 
-                if (convoManager.isOtherAgent(username)) {
-                    console.warn('received whisper from other bot??')
-                }
-                else {
-                    let translation = await handleEnglishTranslation(message);
-                    this.handleMessage(username, translation);
-                }
+                // if (convoManager.isOtherAgent(username)) {
+                    // console.warn('received whisper from other bot??')
+                    // return;
+                // }
+
+                let translation = await handleEnglishTranslation(message);
+                this.handleMessage(username, translation);
             } catch (error) {
                 console.error('Error handling message:', error);
             }
@@ -217,7 +222,6 @@ export class Agent {
 
         const self_prompt = source === 'system';
         const from_other_bot = convoManager.isOtherAgent(source);
-
 
         if (!self_prompt && !from_other_bot) { // from user, check for forced commands
             const user_command_name = containsCommand(message);

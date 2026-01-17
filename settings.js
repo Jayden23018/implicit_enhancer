@@ -4,14 +4,21 @@ const settings = {
     "port": 55916,
     "auth": "offline", // or "microsoft"
 
-    // the mindserver manages all agents and hosts the UI
-    "host_mindserver": false, // if true, the mindserver will be hosted on this machine. otherwise, specify a public IP address
-    "mindserver_host": "localhost",
-    "mindserver_port": 8080,
+    // the monitor server manages all agents and hosts the UI
+    "host_monitor_server": true, // if true, the monitor_server will be hosted on this machine. otherwise, specify a public IP address
+    "monitor_server_host": "localhost",
+    "monitor_server_port": 8080,
+    "load_cloud_database": false, 
+    "respond_to_all_messages" : false,
+    "max_monitor_messages": 20, // max number of monitor messages to keep in context
     "proxyserver_port": 8081,
+    "monitor_model" : {
+        "api" : "doubao",
+        "model": "doubao-1-5-pro-32k-250115"
+    },
     
     // the base profile is shared by all bots for default prompts/examples/modes
-    "base_profile": "./profiles/defaults/survival.json", // survival.json, creative.json, god_mode.json
+    "base_profile": "./profiles/defaults/creative.json", // survival.json, creative.json, god_mode.json
     "profiles": [
         // "./lucy.json",
         "./max.json",
@@ -36,17 +43,19 @@ const settings = {
     "verbose_commands": true, // show full command syntax
     "narrate_behavior": true, // chat simple automatic actions ('Picking up item!')
     "chat_bot_messages": true, // publicly chat messages to other bots
-    "plugins" : [], // plugin will be loaded if and only if it's name appears here
+    "stt_service_provider": "bytedance", // "openai" or "bytedance"
+    "plugins" : ["Dance"], // plugin will be loaded if and only if it's name appears here
 }
 
 // these environment variables override certain settings
 if (process.env.MINECRAFT_PORT) {
     settings.port = process.env.MINECRAFT_PORT;
 }
-if (process.env.MINDSERVER_PORT) {
-    settings.mindserver_port = process.env.MINDSERVER_PORT;
+if (process.env.MONITOR_SERVER_PORT) {
+    settings.monitor_server_port = process.env.MONITOR_SERVER_PORT;
 }
 if (process.env.PROFILES && JSON.parse(process.env.PROFILES).length > 0) {
     settings.profiles = JSON.parse(process.env.PROFILES);
 }
+
 export default settings;

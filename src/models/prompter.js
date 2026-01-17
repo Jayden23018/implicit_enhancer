@@ -204,6 +204,8 @@ export class Prompter {
             model = new ReplicateAPI(profile.model.replace('replicate/', ''), profile.url, profile.params);
         else if (profile.api === 'ollama')
             model = new Local(profile.model.replace('ollama/', ''), profile.url, profile.params);
+        else if (profile.api === 'ollama-agent')
+            model = new LocalAgent(profile.model.replace('ollama/', ''), profile.url, profile.params);
         else if (profile.api === 'mistral')
             model = new Mistral(profile.model, profile.url, profile.params);
         else if (profile.api === 'groq')
@@ -351,7 +353,7 @@ export class Prompter {
             prompt = prompt.replaceAll('$LAST_GOALS', goal_text.trim());
         }
 
-        // In mindcraft, the $BLUEPRINTS is used to show the construcctions of the npc.
+        // the $BLUEPRINTS is used to show the construcctions of the npc.
         if (prompt.includes('$BLUEPRINTS')) {
             if (this.agent.npc.constructions) {
                 let blueprints = '';
@@ -434,6 +436,4 @@ export class Prompter {
         let res = await this.enhancer.sendRequest(this.chat_model, [], prompt);
         return res.trim().toLowerCase() === 'respond';
     }
-
-    
 }

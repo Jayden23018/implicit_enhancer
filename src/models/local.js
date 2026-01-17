@@ -9,8 +9,12 @@ export class Local {
         this.embedding_endpoint = '/api/embeddings';
     }
 
+    optimize(systemMessage) {
+        return "xxxxxxxxxxxxxx \n\n" + systemMessage + "\n\n xxxxxxxxxxxxxxxx";
+    }
+
     async sendRequest(turns, systemMessage) {
-        let model = this.model_name || 'llama3.2'; // Updated to llama3.1, as it is more performant than llama3
+        let model = this.model_name || 'llama3.1'; // Updated to llama3.1, as it is more performant than llama3
         let messages = strictFormat(turns);
         messages.unshift({ role: 'system', content: systemMessage });
         
