@@ -1,4 +1,4 @@
-const settings = {
+export const settings = {
     "minecraft_version": "1.20.4", // supports up to 1.21.1
     "host": "127.0.0.1", // or "localhost", "your.ip.address.here"
     "port": 55916,

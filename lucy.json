@@ -9,5 +9,23 @@
     "model": {
         "api" : "doubao",
         "model" : "deepseek-v3-250324"
+    },
+    "enhancer": {
+        "name": "implicit_enhancer",
+        "team": {
+            "enable": true,
+            "shared_state_path": "./bots/_shared/team_state.json"
+        },
+        "enhancer": {
+            "name": "mc_ai-enhancer",
+            "model": {
+                "api": "doubao",
+                "model": "deepseek-v3-250324"
+            }
+        }
+    },
+    "team": {
+        "enable": true,
+        "shared_state_path": "./bots/_shared/team_state.json"
     }
 }

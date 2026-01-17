@@ -95,6 +95,9 @@ export class ActionManager {
             let timedout = this.timedout;
             this.agent.clearBotLogs();
 
+            // 更新团队任务状态为完成
+            this._updateTeamTaskStatus('done', { actionLabel, output });
+
             // if not interrupted and not generating, emit idle event
             if (!interrupted) {
                 this.agent.bot.emit('idle');
@@ -121,6 +124,8 @@ export class ActionManager {
 
             let interrupted = this.agent.bot.interrupt_code;
             this.agent.clearBotLogs();
+            // 更新团队任务状态为失败
+            this._updateTeamTaskStatus('failed', { actionLabel, error: err.toString() });
             if (!interrupted) {
                 this.agent.bot.emit('idle');
             }
@@ -144,13 +149,33 @@ export class ActionManager {
         return output;
     }
 
-    _startTimeout(TIMEOUT_MINS = 10) {
+    _startTimeout(TIMEOUT_MINS = 2) {
         return setTimeout(async () => {
             console.warn(`Code execution timed out after ${TIMEOUT_MINS} minutes. Attempting force stop.`);
             this.timedout = true;
             this.agent.history.add('system', `Code execution timed out after ${TIMEOUT_MINS} minutes. Attempting force stop.`);
             await this.stop(); // last attempt to stop
+            this._updateTeamTaskStatus('failed', { actionLabel: this.currentActionLabel, timeoutMins: TIMEOUT_MINS });
         }, TIMEOUT_MINS * 60 * 1000);
     }
 
+    _updateTeamTaskStatus(status, extra = {}) {
+        try {
+            const enhancer = this.agent?.prompter?.enhancer;
+            if (!enhancer || typeof enhancer.markTaskDone !== 'function') return;
+            if (status === 'done') {
+                enhancer.markTaskDone(extra);
+            } else if (status === 'failed') {
+                if (typeof enhancer.markTaskFailed === 'function') {
+                    enhancer.markTaskFailed(extra);
+                }
+            } else if (status === 'in_progress') {
+                if (typeof enhancer.markTaskInProgress === 'function') {
+                    enhancer.markTaskInProgress(extra);
+                }
+            }
+        } catch (err) {
+            console.warn('Failed to update team task status:', err);
+        }
+    }
 }

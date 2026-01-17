@@ -8,7 +8,7 @@
     "REPLICATE_API_KEY": "",
     "GROQCLOUD_API_KEY": "",
     "HUGGINGFACE_API_KEY": "",
-    "QWEN_API_KEY": "",
+    "QWEN_API_KEY": "sk-044dbdc9b8724a66939c5d2995353e9b",
     "DOUBAO_API_KEY": "",
     "XAI_API_KEY": "",
     "MISTRAL_API_KEY": "",

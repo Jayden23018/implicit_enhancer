@@ -222,14 +222,21 @@ export async function executeCommand(agent, message) {
     if (typeof parsed === 'string')
         return parsed; //The command was incorrectly formatted or an invalid input was given.
     else {
+        // Prevent interrupting an in-flight action unless explicitly stopping
+        if (agent.actions?.executing && parsed.commandName !== '!stop') {
+            const current = agent.actions.currentActionLabel || 'a previous action';
+            return `Busy executing ${current}. Wait for it to finish or use !stop.`;
+        }
         console.log('parsed command:', parsed);
         const command = getCommand(parsed.commandName);
         let numArgs = 0;
         if (parsed.args) {
             numArgs = parsed.args.length;
         }
-        if (numArgs !== numParams(command))
-            return `Command ${command.name} was given ${numArgs} args, but requires ${numParams(command)} args.`;
+        if (numArgs !== numParams(command)) {
+            const paramNames = commandParamNames(command).join(' ');
+            return `Command ${command.name} was given ${numArgs} args, but requires ${numParams(command)} args. Use: ${command.name} ${paramNames}`;
+        }
         else {
             const result = await command.perform(agent, ...parsed.args);
             return result;

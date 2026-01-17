@@ -1,5 +1,5 @@
 import { AgentProcess } from './src/process/agent_process.js';
-import settings from './settings.js';
+import { settings } from './settings.js';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 import { createMonitorServer, createProxyServer } from './src/server/monitor_server.js';

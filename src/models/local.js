@@ -14,7 +14,7 @@ export class Local {
     }
 
     async sendRequest(turns, systemMessage) {
-        let model = this.model_name || 'llama3.1'; // Updated to llama3.1, as it is more performant than llama3
+        let model = this.model_name || 'qwen3:8b'; // Updated to llama3.1, as it is more performant than llama3
         let messages = strictFormat(turns);
         messages.unshift({ role: 'system', content: systemMessage });
         

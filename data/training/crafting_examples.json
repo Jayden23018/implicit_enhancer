@@ -1,5 +1,100 @@
 [
   {
-    "Reason_step": "1. Understand the goal: Clearly identify what item, structure, or action the player wants.\n2. Find how to do it: Recall or search the recipe/method to achieve it.\n3. Check current status: Use !inventory, !stats, or !nearbyBlocks to see what you already have.\n4. Collect needed materials: If resources are missing, plan and execute commands to gather them immediately.\n5. Prepare tools if necessary: If tools or intermediate steps are required, craft or obtain them first using the correct commands.\n6. Decide efficiently: When multiple options exist, choose the safest and most efficient option or ask the player which to prioritize.\n7. Execute and report: Once ready, output exactly one action command per response (e.g., !collectBlocks(\"oak_log\", 10)) and briefly state what you’re doing."
+    "slug": "crafting/iron_axe",
+    "name": "Craft an Iron Axe",
+    "tab": "crafting",
+    "level": "L1",
+    "rationale": "Craft an Iron Axe to chop wood more efficiently and use it as a weapon.",
+    "actual": "Use a Crafting Table to combine 3 Iron Ingots and 2 Sticks in the correct pattern to make an Iron Axe.",
+    "plan": [
+      {
+        "step": 1,
+        "goal": "Collect Logs to make Wooden Planks and Sticks",
+        "action_nl": "Find nearby trees and collect at least 3 logs using your hand or any tool. Convert some of the logs into Wooden Planks and then craft 2 Sticks.",
+        "action_cmd": [
+          "!collectBlocks('log', 3)",
+          "!craftRecipe('planks', 12)",
+          "!craftRecipe('stick', 2)"
+        ],
+        "verify_cmd": [
+          "!inventory('stick')"
+        ],
+        "preconditions": [
+          "Access to trees nearby",
+          "Enough inventory space"
+        ],
+        "expected": "At least 2 sticks are in your inventory.",
+        "notes": "Logs can come from any tree (Oak, Birch, Spruce). Each log makes 4 planks. Each pair of planks makes 4 sticks."
+      },
+      {
+        "step": 2,
+        "goal": "Mine Iron Ore",
+        "action_nl": "Find and mine at least 3 Iron Ore blocks from caves or hillsides using a Stone Pickaxe.",
+        "action_cmd": [
+          "!collectBlocks('iron_ore', 3)"
+        ],
+        "verify_cmd": [
+          "!inventory('iron_ore')"
+        ],
+        "preconditions": [
+          "Access to cave or exposed stone area",
+          "Stone Pickaxe in inventory"
+        ],
+        "expected": "3 or more Iron Ore blocks collected.",
+        "notes": "Iron Ore appears below Y=64. Avoid mining directly down. Bring torches if entering caves."
+      },
+      {
+        "step": 3,
+        "goal": "Smelt Iron Ore into Iron Ingots",
+        "action_nl": "Use a Furnace to smelt the Iron Ore into Iron Ingots using Coal or Charcoal as fuel.",
+        "action_cmd": [
+          "!smeltItem(\"iron_ore\", 3)"
+        ],
+        "verify_cmd": [
+          "!inventory(\"iron_ingot\")"
+        ],
+        "preconditions": [
+          "Furnace available",
+          "At least 1 fuel source (coal, charcoal, or wood)"
+        ],
+        "expected": "3 Iron Ingots appear in inventory.",
+        "notes": "Each Iron Ore produces one Iron Ingot. One piece of coal can smelt up to 8 items. Use raw material names for smelting - iron_ore not iron_ingot."
+      },
+      {
+        "step": 4,
+        "goal": "Craft an Iron Axe",
+        "action_nl": "Use a Crafting Table to combine 3 Iron Ingots and 2 Sticks in an 'L' shape pattern to craft an Iron Axe.",
+        "action_cmd": [
+          "!craftRecipe('iron_axe', 1)"
+        ],
+        "verify_cmd": [
+          "!inventory('iron_axe')"
+        ],
+        "preconditions": [
+          "Access to a Crafting Table",
+          "3x Iron Ingot",
+          "2x Stick"
+        ],
+        "expected": "An Iron Axe is added to your inventory.",
+        "notes": "Place the Iron Ingots in the top-left, top, and middle-left slots, and Sticks in the center and bottom-middle."
+      },
+      {
+        "step": 5,
+        "goal": "Verify and use the Iron Axe",
+        "action_nl": "Equip the Iron Axe and chop down a tree to confirm it works properly.",
+        "action_cmd": [
+          "!equipItem('iron_axe')",
+          "!collectBlocks('log', 1)"
+        ],
+        "verify_cmd": [
+          "!inventory('log')"
+        ],
+        "preconditions": [
+          "Iron Axe in inventory"
+        ],
+        "expected": "You successfully chop a log using the Iron Axe.",
+        "notes": "The Iron Axe is faster and more durable than wooden or stone tools. Keep it for building and combat."
+      }
+    ]
   }
 ]
