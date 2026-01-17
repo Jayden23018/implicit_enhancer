@@ -239,6 +239,12 @@ export async function executeCommand(agent, message) {
         }
         else {
             const result = await command.perform(agent, ...parsed.args);
+            if (parsed.commandName === '!goal') {
+                const modifyGuide = agent?.plugin?.plugins?.ModifyGuide;
+                if (modifyGuide && typeof modifyGuide.autoApplyIfGoal === 'function') {
+                    await modifyGuide.autoApplyIfGoal(parsed.args?.[0]);
+                }
+            }
             return result;
         }
     }

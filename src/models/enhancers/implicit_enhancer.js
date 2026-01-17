@@ -1,5 +1,5 @@
-import { join } from 'path';
-import { readFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { promises as fs, readFileSync } from 'fs';
 import { Enhancer } from './enhancer.js';
 import { Local } from '../local.js';
 import { Doubao } from '../doubao.js';
@@ -52,6 +52,7 @@ export class ImplicitEnhancer {
         const enhancerConfig = { ...config.enhancer, model: modelInstance };
         this.innerEnhancer = new Enhancer(enhancerConfig);
         this.trainingDir = join(process.cwd(), 'data', 'training');
+        this.memoryDir = join(process.cwd(), 'data', 'memory');
 
         const teamOptions = config.team || {};
         this.sharedMemory = new SharedMemory({
@@ -542,9 +543,41 @@ Provide JSON with fields: type, subtype. Only return JSON.`
         return prompt;
     }
 
-    async saveRelevantInfo(intent, info) {
-        // placeholder for future persistence
+    async saveRelevantInfo(intent, response) {
+        try {
+            const memoryPath = join(this.memoryDir, 'memory.json');
+            await fs.mkdir(dirname(memoryPath), { recursive: true });
+
+            let memoryData = { memory_bank: {} };
+            try {
+                const currentMemory = await fs.readFile(memoryPath, 'utf8');
+                memoryData = JSON.parse(currentMemory);
+            } catch {
+                // No existing memory, start fresh
+            }
+
+            if (!memoryData || typeof memoryData !== 'object') {
+                memoryData = { memory_bank: {} };
+            }
+            if (!memoryData.memory_bank || typeof memoryData.memory_bank !== 'object') {
+                memoryData.memory_bank = {};
+            }
+
+            const type = (intent?.type || 'general').toLowerCase();
+            const key = `last_${type}_action`;
+            memoryData.memory_bank[key] = {
+                intent: intent?.subtype || 'unknown',
+                result: (response || '').substring(0, 100) + '...',
+                timestamp: new Date().toISOString()
+            };
+
+            await fs.writeFile(memoryPath, JSON.stringify(memoryData, null, 2));
+        } catch (error) {
+            const details = error?.stack || error?.message || JSON.stringify(error);
+            console.error('[ImplicitEnhancer] Failed to save memory:', details);
+        }
     }
+
 
     normalizeCommandsInResponse(response) {
         if (!response || typeof response !== 'string') {
