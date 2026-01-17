@@ -1,5 +1,6 @@
 
 import { readdirSync, readFileSync, existsSync } from 'fs';
+import { join } from 'path';
 import * as skills from '../../agent/library/skills.js';
 import * as world from '../../agent/library/world.js';
 import * as mc from '../../utils/mcdata.js';
@@ -36,14 +37,16 @@ export class PluginInstance {
                 }
             }
         } catch (e) {
-            console.log('Error reading plan files:', e);
+            if (e?.code !== 'ENOENT') {
+                console.log('Error reading plan files:', e);
+            }
         }
 
         try {
             const path = `bots/${this.agent.name}/task.json`;
-            if (existsSync(this.path)) {
+            if (existsSync(path)) {
                 const taskConfigs = JSON.parse(readFileSync(path, 'utf8'));
-                this.task = Task(this.agent, taskConfigs);
+                this.task = new Task(this.agent, taskConfigs);
             }
         } catch (e) {
             console.log('Error reading task file:', e);

@@ -27,3 +27,6 @@ wandb/
 experiments/
 tools/
 archive/
+keys.json
+settings.js
+max.json
