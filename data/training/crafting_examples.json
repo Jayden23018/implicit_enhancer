@@ -96,5 +96,243 @@
         "notes": "The Iron Axe is faster and more durable than wooden or stone tools. Keep it for building and combat."
       }
     ]
+  },
+  {
+    "slug": "crafting/diamond_pickaxe",
+    "name": "Craft a Diamond Pickaxe",
+    "tab": "crafting",
+    "level": "L2",
+    "rationale": "Craft a Diamond Pickaxe to mine obsidian and other rare materials efficiently.",
+    "actual": "Use a Crafting Table to combine 3 Diamonds and 2 Sticks to make a Diamond Pickaxe.",
+    "plan": [
+      {
+        "step": 1,
+        "goal": "Collect Logs to make Sticks",
+        "action_nl": "Find nearby trees and collect logs, then craft sticks.",
+        "action_cmd": [
+          "!collectBlocks('log', 1)",
+          "!craftRecipe('planks', 4)",
+          "!craftRecipe('stick', 2)"
+        ],
+        "verify_cmd": [
+          "!inventory('stick')"
+        ],
+        "preconditions": [
+          "Access to trees nearby"
+        ],
+        "expected": "At least 2 sticks are in your inventory.",
+        "notes": "Sticks are needed for the handle."
+      },
+      {
+        "step": 2,
+        "goal": "Mine Diamond Ore",
+        "action_nl": "Find and mine at least 3 diamond ore blocks from deep underground (Y < -58) using an Iron Pickaxe or better.",
+        "action_cmd": [
+          "!collectBlocks('diamond_ore', 3)"
+        ],
+        "verify_cmd": [
+          "!inventory('diamond')"
+        ],
+        "preconditions": [
+          "Iron Pickaxe or better in inventory",
+          "Access to deep underground"
+        ],
+        "expected": "3 or more diamonds collected.",
+        "notes": "Diamonds only spawn below Y=-58. You MUST use an Iron Pickaxe or better."
+      },
+      {
+        "step": 3,
+        "goal": "Craft a Diamond Pickaxe",
+        "action_nl": "Use a Crafting Table to combine 3 Diamonds and 2 Sticks in a 'T' shape pattern.",
+        "action_cmd": [
+          "!craftRecipe('diamond_pickaxe', 1)"
+        ],
+        "verify_cmd": [
+          "!inventory('diamond_pickaxe')"
+        ],
+        "preconditions": [
+          "Access to a Crafting Table",
+          "3x Diamond",
+          "2x Stick"
+        ],
+        "expected": "A Diamond Pickaxe is added to your inventory.",
+        "notes": "Diamond Pickaxe can mine obsidian and is very durable."
+      }
+    ]
+  },
+  {
+    "slug": "crafting/stone_sword",
+    "name": "Craft a Stone Sword",
+    "tab": "crafting",
+    "level": "L1",
+    "rationale": "Craft a Stone Sword for combat and self-defense.",
+    "actual": "Use a Crafting Table to combine 2 Cobblestone and 1 Stick to make a Stone Sword.",
+    "plan": [
+      {
+        "step": 1,
+        "goal": "Collect stone for cobblestone",
+        "action_nl": "Mine stone blocks using a wooden pickaxe to get cobblestone.",
+        "action_cmd": [
+          "!collectBlocks('stone', 2)"
+        ],
+        "verify_cmd": [
+          "!inventory('cobblestone')"
+        ],
+        "preconditions": [
+          "Wooden Pickaxe in inventory",
+          "Access to stone"
+        ],
+        "expected": "At least 2 cobblestone in inventory.",
+        "notes": "Mining stone always yields cobblestone."
+      },
+      {
+        "step": 2,
+        "goal": "Craft sticks",
+        "action_nl": "Convert logs into planks and then craft a stick.",
+        "action_cmd": [
+          "!collectBlocks('log', 1)",
+          "!craftRecipe('planks', 4)",
+          "!craftRecipe('stick', 1)"
+        ],
+        "verify_cmd": [
+          "!inventory('stick')"
+        ],
+        "preconditions": [
+          "Access to trees"
+        ],
+        "expected": "At least 1 stick in inventory.",
+        "notes": "Swords only need 1 stick, not 2 like most tools."
+      },
+      {
+        "step": 3,
+        "goal": "Craft a Stone Sword",
+        "action_nl": "Use a Crafting Table with 2 cobblestone above 1 stick in a vertical line.",
+        "action_cmd": [
+          "!craftRecipe('stone_sword', 1)"
+        ],
+        "verify_cmd": [
+          "!inventory('stone_sword')"
+        ],
+        "preconditions": [
+          "Access to a Crafting Table",
+          "2x Cobblestone",
+          "1x Stick"
+        ],
+        "expected": "A Stone Sword is added to your inventory.",
+        "notes": "Swords are for combat. Axes can also be used as weapons."
+      }
+    ]
+  },
+  {
+    "slug": "crafting/wooden_hoe",
+    "name": "Craft a Wooden Hoe",
+    "tab": "crafting",
+    "level": "L1",
+    "rationale": "Craft a Wooden Hoe to till soil for farming.",
+    "actual": "Use a Crafting Table to combine 2 Planks and 2 Sticks to make a Wooden Hoe.",
+    "plan": [
+      {
+        "step": 1,
+        "goal": "Collect and process wood",
+        "action_nl": "Collect logs and convert them into planks and sticks.",
+        "action_cmd": [
+          "!collectBlocks('log', 2)",
+          "!craftRecipe('planks', 8)",
+          "!craftRecipe('stick', 2)"
+        ],
+        "verify_cmd": [
+          "!inventory('planks')",
+          "!inventory('stick')"
+        ],
+        "preconditions": [
+          "Access to trees"
+        ],
+        "expected": "At least 2 planks and 2 sticks in inventory.",
+        "notes": "Hoes require 2 planks and 2 sticks in a specific pattern."
+      },
+      {
+        "step": 2,
+        "goal": "Craft a Wooden Hoe",
+        "action_nl": "Use a Crafting Table with planks and sticks in hoe pattern.",
+        "action_cmd": [
+          "!craftRecipe('wooden_hoe', 1)"
+        ],
+        "verify_cmd": [
+          "!inventory('wooden_hoe')"
+        ],
+        "preconditions": [
+          "Access to a Crafting Table",
+          "2x Wooden Planks",
+          "2x Stick"
+        ],
+        "expected": "A Wooden Hoe is added to your inventory.",
+        "notes": "Hoes are used to till dirt into farmland for crops."
+      }
+    ]
+  },
+  {
+    "slug": "crafting/gold_shovel",
+    "name": "Craft a Gold Shovel",
+    "tab": "crafting",
+    "level": "L1",
+    "rationale": "Craft a Gold Shovel for fast digging (though not durable).",
+    "actual": "Use a Crafting Table to combine 1 Gold Ingot and 2 Sticks to make a Gold Shovel.",
+    "plan": [
+      {
+        "step": 1,
+        "goal": "Craft sticks",
+        "action_nl": "Convert logs into planks and then craft 2 sticks.",
+        "action_cmd": [
+          "!collectBlocks('log', 1)",
+          "!craftRecipe('planks', 4)",
+          "!craftRecipe('stick', 2)"
+        ],
+        "verify_cmd": [
+          "!inventory('stick')"
+        ],
+        "preconditions": [
+          "Access to trees"
+        ],
+        "expected": "At least 2 sticks in inventory.",
+        "notes": "Sticks are needed for the handle."
+      },
+      {
+        "step": 2,
+        "goal": "Mine and smelt Gold Ore",
+        "action_nl": "Find gold ore and smelt it into gold ingots.",
+        "action_cmd": [
+          "!collectBlocks('gold_ore', 1)",
+          "!smeltItem(\"gold_ore\", 1)"
+        ],
+        "verify_cmd": [
+          "!inventory('gold_ingot')"
+        ],
+        "preconditions": [
+          "Iron Pickaxe or better",
+          "Furnace available",
+          "Fuel source"
+        ],
+        "expected": "At least 1 gold ingot in inventory.",
+        "notes": "Gold requires iron pickaxe or better to mine."
+      },
+      {
+        "step": 3,
+        "goal": "Craft a Gold Shovel",
+        "action_nl": "Use a Crafting Table with 1 gold ingot above 2 sticks.",
+        "action_cmd": [
+          "!craftRecipe('golden_shovel', 1)"
+        ],
+        "verify_cmd": [
+          "!inventory('golden_shovel')"
+        ],
+        "preconditions": [
+          "Access to a Crafting Table",
+          "1x Gold Ingot",
+          "2x Stick"
+        ],
+        "expected": "A Gold Shovel is added to your inventory.",
+        "notes": "Gold tools are fast but not durable. Good for quick digging projects."
+      }
+    ]
   }
 ]
