@@ -6,14 +6,18 @@ import { Doubao } from '../doubao.js';
 import { Qwen } from '../qwen.js';
 import { SharedMemory } from '../../team/shared_memory.js';
 import { actionsList } from '../../agent/commands/actions.js';
+// 新增导入
+import { PreconditionExtractor } from './precondition_extractor.js';
+import { FewShotBuilder } from './fewshot_builder.js';
+import { ItemNormalizer } from './item_normalizer.js';
+import { KeywordExtractor } from './keyword_extractor.js';
 
-// Intent -> training file mapping
+// Intent -> training file mapping (simplified: no COMBAT category)
 const INTENT_TO_TRAINING_FILE = {
     BUILD: 'build_examples.json',
-    CRAFT: 'crafting_examples.json',
-    COOK: 'cooking_examples.json',
+    CRAFT: 'crafting_examples.json',  // includes weapon crafting
     COLLECT: 'craft_examples.json',
-    COMBAT: 'combat_examples.json',
+    EXPLORE: 'craft_examples.json',   // attack/combat actions
     DEFAULT: 'build_examples.json'
 };
 
@@ -60,6 +64,15 @@ export class ImplicitEnhancer {
             path: teamOptions.shared_state_path
         });
         this.enableTeamContext = teamOptions.enable !== false; // default on
+
+        // 新增：初始化组件
+        this.preconditionExtractor = new PreconditionExtractor(this.debug);
+        this.fewShotBuilder = new FewShotBuilder(this.debug);
+        this.itemNormalizer = new ItemNormalizer(this.debug);
+        this.keywordExtractor = new KeywordExtractor(this.debug);
+
+        // 新增：初始化示例选择器（用于训练数据）
+        this.examplesSelector = null;
     }
 
     logDebug(...args) {
@@ -229,25 +242,26 @@ export class ImplicitEnhancer {
     }
 
     async determineIntentType(input) {
-        const analysisPrompt = {
-            role: 'system',
-            content: `You are an intent analyzer for a Minecraft AI agent. Analyze the given input and determine the user's intent.
-Categorize the intent into one of these types: BUILD, CRAFT, COOK, COLLECT, COMBAT, EXPLORE, INTERACT, GENERAL.
-Provide JSON with fields: type, subtype. Only return JSON.`
-        };
+        const lower = input.toLowerCase();
 
-        const userMessage = { role: 'user', content: input };
-
-        try {
-            const analysis = await this.innerEnhancer.sendRequest(null, [userMessage], analysisPrompt.content, '***');
-            const match = analysis.match(/\{[\s\S]*\}/);
-            const jsonText = match ? match[0] : '{}';
-            const result = JSON.parse(jsonText);
-            return { type: result.type, subtype: result.subtype };
-        } catch (error) {
-            console.warn('Intent analysis failed:', error);
-            return { type: 'GENERAL', subtype: 'unknown' };
+        // Simplified intent classification: only identify actions, not usage
+        // "craft an iron axe" → CRAFT (weapon crafting)
+        // "attack zombie" → EXPLORE (combat action, not crafting)
+        if (['craft', 'make', 'build', 'create', 'cook', 'smelt'].some(kw => lower.includes(kw))) {
+            return { type: 'CRAFT', subtype: 'creation' };
         }
+        if (['collect', 'gather', 'mine', 'chop', 'harvest'].some(kw => lower.includes(kw))) {
+            return { type: 'COLLECT', subtype: 'resource_gathering' };
+        }
+        if (['attack', 'kill', 'fight'].some(kw => lower.includes(kw))) {
+            // Combat actions categorized as EXPLORE (not weapon crafting)
+            return { type: 'EXPLORE', subtype: 'combat' };
+        }
+        if (['place', 'put', 'construct', 'structure'].some(kw => lower.includes(kw))) {
+            return { type: 'BUILD', subtype: 'construction' };
+        }
+
+        return { type: 'GENERAL', subtype: 'unknown' };
     }
 
     async getRelevantInfo(intent) {
@@ -455,13 +469,60 @@ Provide JSON with fields: type, subtype. Only return JSON.`
         return null;
     }
 
-    async improvePrompt(intent, info, systemPrompt, teamTasks = []) {
+    async improvePrompt(intent, info, systemPrompt, teamTasks = [], skipResult = null) {
         let prompt = systemPrompt;
-        const intentText = intent?.type || 'GENERAL';
-        prompt += `\n\nCurrent Intent: "${intentText}".`;
 
-        // Activate mission for BUILD/CRAFT when not active and plan available
-        if (!this.activeMission.isActive && intent && ['BUILD', 'CRAFT'].includes(intent.type) && info && info.length > 0) {
+        // 新增：提取用户关键字
+        const userKeywords = this.keywordExtractor.extract(intent?.input || '');
+        prompt += `\n\n## USER REQUEST ANALYSIS\n`;
+        prompt += `Input: "${intent?.input || ''}"\n`;
+        prompt += `Target: ${userKeywords.target || 'Unknown'}\n`;
+        prompt += `Material: ${userKeywords.material || 'Not specified'}\n`;
+        prompt += `Tool Type: ${userKeywords.tool || 'Not specified'}\n`;
+
+        // 新增：提取并注入前置条件
+        const preconditions = this.preconditionExtractor.extractPreconditions(info || []);
+        if (preconditions.length > 0) {
+            const precText = this.preconditionExtractor.formatForPrompt(preconditions);
+            prompt += precText;
+        }
+
+        // 环境感知注入
+        const environmentContext = this.buildEnvironmentContext();
+        if (environmentContext) {
+            prompt += environmentContext;
+        }
+
+        // 添加 Few-shot 示例（带用户关键字）
+        if (info && info.length > 0) {
+            const primaryExample = info[0];
+
+            // 构建示例部分
+            const examplesText = this.fewShotBuilder.buildExamplesSection(info, userKeywords);
+            prompt += examplesText;
+
+            // 新增：关键字替换指导
+            const substitutionGuide = this.fewShotBuilder.buildKeywordSubstitutionGuide(userKeywords, primaryExample);
+            prompt += substitutionGuide;
+
+            // 泛化指导
+            const guideText = this.fewShotBuilder.buildGeneralizationGuide(info);
+            prompt += guideText;
+
+            // 生成变体示例
+            const variants = this.fewShotBuilder.generateVariantsFromExample(primaryExample, 2);
+            if (variants.length > 0) {
+                prompt += '\n## PATTERN VARIANTS\n\n';
+                prompt += '基于示例生成的相关变体（学习替换规律）：\n';
+                for (const v of variants) {
+                    prompt += `- ${v.name}: ${v.description}\n`;
+                }
+                prompt += '\n';
+            }
+        }
+
+        // 激活任务（仅在 BUILD/CRAFT/GENERAL 时）
+        if (!this.activeMission.isActive && intent && ['BUILD', 'CRAFT', 'GENERAL'].includes(intent.type) && info && info.length > 0) {
             const primaryExample = info.find(ex => Array.isArray(ex.plan) && ex.plan.length > 0);
             if (primaryExample) {
                 this.activeMission = {
@@ -473,19 +534,27 @@ Provide JSON with fields: type, subtype. Only return JSON.`
                         verify_cmd: step.verify_cmd ? [...step.verify_cmd] : []
                     })),
                     currentStep: 0,
-                    failures: 0
+                    failures: 0,
+                    // 新增：存储用户关键字，用于命令替换
+                    userKeywords: userKeywords
                 };
-                this.logDebug(`[ImplicitEnhancer] Started mission "${this.activeMission.planName}" with ${this.activeMission.steps.length} steps for intent ${intent.type}`);
+                this.logDebug(`[ImplicitEnhancer] Started mission "${this.activeMission.planName}" with ${this.activeMission.steps.length} steps`);
+                this.logDebug(`[ImplicitEnhancer] User keywords:`, userKeywords);
             }
         }
 
-        // Mission control injection (simple)
+        // Mission control injection（带关键字替换提醒）
         if (this.activeMission.isActive) {
-            const { steps, currentStep, planName } = this.activeMission;
+            const { steps, currentStep, planName, userKeywords } = this.activeMission;
             const safeIndex = Math.min(currentStep, Math.max(steps.length - 1, 0));
             const step = steps[safeIndex] || {};
             const goal = step.goal || 'Follow the plan step carefully.';
+
+            // 新增：动态替换命令中的关键字
             let requiredCmd = (step.action_cmd && step.action_cmd.length > 0) ? step.action_cmd[0] : '!inventory';
+            if (userKeywords && userKeywords.target) {
+                requiredCmd = this.substituteKeywords(requiredCmd, userKeywords);
+            }
 
             let miningHint = '';
             const cmdMatch = requiredCmd.match(/!collectBlocks\(\s*["']([^"']+)["']/i);
@@ -502,19 +571,39 @@ Provide JSON with fields: type, subtype. Only return JSON.`
             }
 
             prompt += `\n\n*** MISSION CONTROL ***\n`;
+
+            if (skipResult && skipResult.skipped && skipResult.skipReason) {
+                prompt += `⚠️ 步骤跳过: ${skipResult.skipReason}\n`;
+                prompt += `重要: 你已经有足够的物品，直接执行当前步骤，不要重复收集！\n\n`;
+            }
+
             prompt += `PLAN: ${planName || 'Mission'}\n`;
             prompt += `STEP: ${Math.min(currentStep + 1, steps.length || 1)} / ${steps.length || 1}\n`;
             prompt += `TASK: ${overrideGoal || goal}\n`;
             prompt += `MANDATORY COMMAND: ${requiredCmd}\n`;
+
+            // 新增：关键字替换提醒
+            if (userKeywords && userKeywords.target) {
+                prompt += `\n⚠️ KEYWORD SUBSTITUTION REQUIRED:\n`;
+                prompt += `- 在执行命令时，使用用户请求的值: ${userKeywords.target}\n`;
+                prompt += `- 不要使用示例中的具体值\n`;
+            }
+
             if (miningHint) {
                 prompt += `${miningHint}\n`;
             }
             if (overrideAdvice) {
                 prompt += `${overrideAdvice}\n`;
             }
-            prompt += `ABSTRACT RULES:\n- BEFORE any action, run !inventory to see current resources. If materials already exist, DO NOT collect more; move to crafting/next step.\n- Before smelting: if no furnace is placed nearby, place your furnace; if you have none, craft one; then smelt.\n- Before executing any action_cmd that mines a block, check whether you have the required tool. If missing, pause the plan and inject a tool-crafting subplan. Never try to mine with the wrong tool.\n- Follow the plan until all steps are done; after completing a step, go to the next one immediately. Do NOT ask the user what to do next unless the plan is fully complete.\n- Craft items instead of searching when they are not natural blocks.\n- Only use !searchForBlock for natural blocks you can find in the world.\n- ALWAYS specify tool material (e.g., stone_pickaxe, iron_pickaxe), never generic "pickaxe".\n- To obtain cobblestone: use a wooden_pickaxe to mine stone to get cobblestone.\n- Narrate briefly, then output the exact command.\n`;
+
+            prompt += `GENERAL RULES:\n`;
+            prompt += `- 学习示例的 **步骤结构**，但替换 **关键字** (材料、工具)\n`;
+            prompt += `- 示例教你 "怎么做"，你根据用户请求决定 "做什么"\n`;
+            prompt += `- Follow the plan until all steps are done; after completing a step, go to the next one immediately.\n`;
+            prompt += `- Do NOT ask the user what to do next unless the plan is fully complete.\n`;
+            prompt += `- 执行命令前检查库存，如果物品足够直接跳过收集步骤。\n`;
+            prompt += `- Narrate briefly, then output the exact command.\n`;
             prompt += `\nOUTPUT FORMAT:\nTHOUGHT: [Reasoning about the current state/plan]\nCOMMAND: !commandName("arg1", arg2)\n`;
-            prompt += `\nExample (Dynamic Subplan Injection):\nGoal: Collect Cobblestone\nInventory: no pickaxe\nThought: Cobblestone requires a pickaxe. I need to craft a wooden pickaxe first.\nCommands:\n!collectBlocks("log", 2)\n!craftRecipe("planks", 4)\n!craftRecipe("stick", 2)\n!craftRecipe("wooden_pickaxe", 1)\n`;
 
             if (teamTasks && teamTasks.length > 0) {
                 const teamText = teamTasks.map(t => {
@@ -541,6 +630,43 @@ Provide JSON with fields: type, subtype. Only return JSON.`
         prompt += `\nOUTPUT FORMAT:\nTHOUGHT: [Reasoning about the current state/plan]\nCOMMAND: !commandName("arg1", arg2)\n`;
         prompt += `\nExample (Dynamic Subplan Injection):\nGoal: Collect Cobblestone\nInventory: no pickaxe\nThought: Cobblestone requires a pickaxe. I need to craft a wooden pickaxe first.\nCommands:\n!collectBlocks("log", 2)\n!craftRecipe("planks", 4)\n!craftRecipe("stick", 2)\n!craftRecipe("wooden_pickaxe", 1)\n`;
         return prompt;
+    }
+
+    /**
+     * 新增：在命令中替换关键字
+     */
+    substituteKeywords(command, userKeywords) {
+        if (!userKeywords.target) return command;
+
+        // 替换常见模式
+        let result = command;
+
+        // !craftRecipe("stone_sword", 1) → !craftRecipe("iron_axe", 1)
+        result = result.replace(
+            /!craftRecipe\("([^"]+)"(?:,\s*\d+\s*)?\)/g,
+            () => {
+                return `!craftRecipe("${userKeywords.target}", 1)`;
+            }
+        );
+
+        // !collectBlocks("stone", 8) → !collectBlocks("iron_ore", 3)
+        if (userKeywords.material) {
+            result = result.replace(
+                /!collectBlocks\("([^"]+)"(?:,\s*\d+\s*)?\)/g,
+                (match, target) => {
+                    // 如果示例中的目标包含材料，替换为新材料
+                    const materials = ['wood', 'stone', 'iron', 'gold', 'diamond'];
+                    for (const mat of materials) {
+                        if (target.includes(mat)) {
+                            return `!collectBlocks("${userKeywords.material}_ore", 3)`;
+                        }
+                    }
+                    return match;
+                }
+            );
+        }
+
+        return result;
     }
 
     async saveRelevantInfo(intent, response) {
