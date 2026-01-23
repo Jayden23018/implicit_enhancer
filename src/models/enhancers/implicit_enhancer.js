@@ -315,43 +315,6 @@ export class ImplicitEnhancer {
         const invItems = bot.inventory.items?.() || [];
         const countInInv = (name) => invItems.filter(i => i.name === name).reduce((s, i) => s + i.count, 0);
 
-        // Ensure there is a furnace before smelting
-        const smeltMatch = commandString.match(/!smeltItem\(\s*["']([^"']+)["']/i);
-        if (smeltMatch) {
-            const hasFurnace = countInInv('furnace') > 0;
-            let nearbyFurnace = null;
-            try {
-                nearbyFurnace = bot.findBlock?.({
-                    maxDistance: 32,
-                    matching: (b) => b?.name === 'furnace'
-                });
-            } catch (_) { /* ignore findBlock failures */ }
-
-            if (!nearbyFurnace) {
-                if (hasFurnace) {
-                    return {
-                        goal: '放置熔炉后再进行熔炼',
-                        command: '!placeHere("furnace")',
-                        advice: '附近没有熔炉，但背包里有。先把熔炉放下。'
-                    };
-                }
-                const cobble = countInInv('cobblestone');
-                if (cobble < 8) {
-                    const need = 8 - cobble;
-                    return {
-                        goal: `收集圆石以合成熔炉（缺少 ${need} 个）`,
-                        command: `!collectBlocks("cobblestone", ${need})`,
-                        advice: `没有熔炉也没有足够的圆石来制作熔炉，先补足圆石 ${need} 个。`
-                    };
-                }
-                return {
-                    goal: '先合成熔炉，再进行熔炼',
-                    command: '!craftRecipe("furnace", 1)',
-                    advice: '附近没有熔炉，背包也没有，先合成一个熔炉再 smelt。'
-                };
-            }
-        }
-
         // Fix misused attack for mining blocks
         const attackMatch = commandString.match(/!attack\(\s*["']([^"']+)["']/i);
         if (attackMatch) {
