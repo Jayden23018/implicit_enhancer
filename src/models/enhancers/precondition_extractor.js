@@ -160,6 +160,96 @@ export class PreconditionExtractor {
         return missing;
     }
 
+    /**
+     * Generic check for a required workstation (Furnace, Crafting Table, etc.)
+     * Returns a task override object if the station is missing, or null if ready.
+     *
+     * @param {string} stationName - The name of the station to check (e.g., 'furnace', 'crafting_table')
+     * @param {object} bot - The mineflayer bot instance
+     * @returns {object|null} - Task override object if action is needed, null if satisfied
+     */
+    resolveStationRequirement(stationName, bot) {
+        if (!bot) return null;
+
+        // 1. Check if the block exists in the world nearby
+        let nearbyBlock = null;
+        try {
+            nearbyBlock = bot.findBlock({
+                matching: b => b.name === stationName,
+                maxDistance: 32
+            });
+        } catch (_) { /* ignore findBlock failures */ }
+
+        if (nearbyBlock) return null; // Station exists, proceed!
+
+        // 2. Check if we have the item in inventory to place it
+        const invCount = (name) => {
+            const items = bot.inventory.items().filter(i => i.name === name);
+            return items.reduce((acc, item) => acc + item.count, 0);
+        };
+
+        if (invCount(stationName) > 0) {
+            return {
+                goal: `Place ${stationName} to use it`,
+                command: `!placeHere("${stationName}")`,
+                advice: `You have a ${stationName} in your inventory. Place it down to use it.`
+            };
+        }
+
+        // 3. Dynamic Recipe Analysis: What do we need to craft this station?
+        const stationItem = bot.registry.itemsByName[stationName];
+        if (!stationItem) return null; // Invalid item name
+
+        const recipes = bot.recipesFor(stationItem.id, null, 1, null);
+        if (recipes.length === 0) return null; // No known recipe
+
+        const recipe = recipes[0]; // Take the first available recipe
+
+        // Calculate missing ingredients
+        const missingIngredients = [];
+
+        if (recipe.delta) {
+            for (const delta of recipe.delta) {
+                if (delta.count < 0) { // It's an ingredient
+                    const ingredientId = delta.id;
+                    const requiredAmount = Math.abs(delta.count);
+                    const ingredientName = bot.registry.items[ingredientId].name;
+
+                    const currentAmount = invCount(ingredientName);
+                    if (currentAmount < requiredAmount) {
+                        missingIngredients.push({
+                            name: ingredientName,
+                            missing: requiredAmount - currentAmount
+                        });
+                    }
+                }
+            }
+        }
+
+        // 4. Determine Action based on missing ingredients
+        if (missingIngredients.length === 0) {
+            // We have all ingredients, but haven't crafted the station yet
+            return {
+                goal: `Craft ${stationName} first`,
+                command: `!craftRecipe("${stationName}", 1)`,
+                advice: `You have materials to make a ${stationName}. Craft it first.`
+            };
+        } else {
+            // We are missing materials - Pick the first missing ingredient to gather
+            const firstMissing = missingIngredients[0];
+
+            // Intelligence fix: Map 'cobblestone' to 'stone' for mining if needed
+            let mineTarget = firstMissing.name;
+            if (mineTarget === 'cobblestone') mineTarget = 'stone';
+
+            return {
+                goal: `Gather ${firstMissing.name} for ${stationName} (missing ${firstMissing.missing})`,
+                command: `!collectBlocks("${mineTarget}", ${firstMissing.missing})`,
+                advice: `You need ${firstMissing.missing} more ${firstMissing.name} to craft a ${stationName}.`
+            };
+        }
+    }
+
     logDebug(...args) {
         if (this.debug) {
             console.log(...args);

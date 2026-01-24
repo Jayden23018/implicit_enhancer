@@ -315,6 +315,26 @@ export class ImplicitEnhancer {
         const invItems = bot.inventory.items?.() || [];
         const countInInv = (name) => invItems.filter(i => i.name === name).reduce((s, i) => s + i.count, 0);
 
+        // Map commands to their required stations
+        const STATION_MAP = {
+            '!smeltItem': 'furnace',
+            '!cookItem': 'furnace', // or smoker
+            // '!craftRecipe': 'crafting_table' // logic could be added here, but craftRecipe handles it mostly
+        };
+
+        // Extract command name
+        const cmdMatch = commandString.match(/!(\w+)\(/);
+        if (cmdMatch) {
+            const cmdName = cmdMatch[1];
+            const requiredStation = STATION_MAP[cmdName];
+
+            if (requiredStation) {
+                // Use the refactored logic in PreconditionExtractor
+                const override = this.preconditionExtractor.resolveStationRequirement(requiredStation, bot);
+                if (override) return override;
+            }
+        }
+
         // Fix misused attack for mining blocks
         const attackMatch = commandString.match(/!attack\(\s*["']([^"']+)["']/i);
         if (attackMatch) {
@@ -430,6 +450,31 @@ export class ImplicitEnhancer {
         }
 
         return null;
+    }
+
+    buildEnvironmentContext() {
+        const bot = this.agent?.bot;
+        if (!bot) return '';
+
+        let context = '\n## ENVIRONMENT CONTEXT\n';
+        const time = bot.time?.timeOfDay;
+        if (time !== undefined) {
+            context += `Time: ${time} (${time < 13000 ? 'Day' : 'Night'})\n`;
+        }
+
+        try {
+            if (bot.entity?.position && bot.world?.getBiome) {
+                const biomeId = bot.world.getBiome(bot.entity.position);
+                const biomeName = mc.getAllBiomes()[biomeId]?.name;
+                if (biomeName) {
+                    context += `Biome: ${biomeName}\n`;
+                }
+            }
+        } catch (err) {
+            // Ignore biome errors
+        }
+
+        return context;
     }
 
     async improvePrompt(intent, info, systemPrompt, teamTasks = [], skipResult = null) {
