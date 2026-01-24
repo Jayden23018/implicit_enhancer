@@ -1,5 +1,4 @@
 import { searchGuides } from '../GuideReader/main.js';
-import { searchGuides } from '../GuideReader/main.js';
 
 export class PluginInstance {
     constructor(agent) {
